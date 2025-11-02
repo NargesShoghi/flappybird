@@ -19,6 +19,8 @@ let pipeY = 0; // top pipe at the top
 
 let topPipeImg;
 let bottomPipeImg;
+let gravity = 1;
+let jumpVelocity = 50;
 
 window.onload = function () {
   // Setup canvas
@@ -52,6 +54,17 @@ window.onload = function () {
   birdImg.onload = tryDraw;
   topPipeImg.onload = tryDraw;
   bottomPipeImg.onload = tryDraw;
+
+  this.addEventListener("keydown", function (evt) {
+    if (evt.code === "Space" || evt.code === "ArrowUp") {
+      birdY -= jumpVelocity; // Move bird up by 50 pixels
+      if (birdY < 0) {
+        birdY = 0; // Prevent bird from going above the board
+      }
+    }
+  });
+
+  update();
 };
 
 function drawScene() {
@@ -59,7 +72,7 @@ function drawScene() {
   context.clearRect(0, 0, boardWidth, boardHeight);
 
   // Draw the bird (centered vertically, near the left)
-  context.drawImage(birdImg, birdX, birdY, birdWidth, birdHeight);
+  drawBird();
 
   // Draw pipe pair on the right side.
   // Top pipe at y=0:
@@ -69,4 +82,26 @@ function drawScene() {
   // (No "gap" logic yet—just static placement.)
   const bottomPipeY = boardHeight - pipeHeight;
   context.drawImage(bottomPipeImg, pipeX, bottomPipeY, pipeWidth, pipeHeight);
+}
+// Function to draw the bird at its current position
+function drawBird() {
+  context.drawImage(birdImg, birdX, birdY, birdWidth, birdHeight);
+}
+
+// Main game loop
+function update() {
+  // Clears the entire canvas
+  //context.clearRect(0, 0, board.width, board.height);
+  // Clear only the bird's previous area (small padding to avoid artifacts)
+  context.clearRect(birdX - 2, 0, birdWidth + 4, boardHeight);
+  // Updates the bird's position
+  birdY = birdY + gravity; // Gravity effect: bird falls down each frame
+  if (birdY + birdHeight > boardHeight) {
+    birdY = boardHeight - birdHeight; // Prevent bird from falling below the board
+    alert("Game Over!");
+    return; // Stop the game loop
+  }
+  // Draws the bird at its new position
+  drawBird();
+  requestAnimationFrame(update);
 }
