@@ -1,18 +1,46 @@
 body {
   display: flex;
   justify-content: center;
-  /* align-items: center; */
   height: 100vh;
   background: #a1c0c4;
+  font-family: Arial, sans-serif;
+  margin: 0;
 }
 
 .game-container {
   display: flex;
-  justify-content: center;
+  gap: 20px;
 }
 
 .game-canvas {
   background-image: url("./flappybirdbg.png");
   background-repeat: no-repeat;
   background-size: contain;
+}
+
+.controls {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #4caf50;
+  color: white;
+  font-weight: bold;
+}
+
+.btn:hover {
+  background: #45a049;
+}
+
+.btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }

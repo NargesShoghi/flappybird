@@ -11,6 +11,11 @@ let birdX = boardWidth / 8;
 let birdY = (boardHeight - birdHeight) / 2; // centered vertically
 let birdImg;
 
+// --- Physics ---
+let velocity = 0;
+let gravity = 0.5;
+let jumpStrength = -8;
+
 // --- Pipes (static for now) ---
 let pipeWidth = 64; // width/height ratio = 1/8 for the given sprites
 let pipeHeight = 250;
@@ -19,8 +24,15 @@ let pipeY = 0; // top pipe at the top
 
 let topPipeImg;
 let bottomPipeImg;
-let gravity = 1;
-let jumpVelocity = 50;
+
+// --- Game State ---
+const START = "START";
+const RUNNING = "RUNNING";
+const GAME_OVER = "GAME_OVER";
+let gameState = START;
+
+// --- UI Elements ---
+let startBtn, restartBtn;
 
 window.onload = function () {
   // Setup canvas
@@ -28,6 +40,10 @@ window.onload = function () {
   board.width = boardWidth;
   board.height = boardHeight;
   context = board.getContext("2d");
+
+  // Get UI elements
+  startBtn = document.getElementById("startBtn");
+  restartBtn = document.getElementById("restartBtn");
 
   // Load images
   birdImg = new Image();
@@ -55,53 +71,122 @@ window.onload = function () {
   topPipeImg.onload = tryDraw;
   bottomPipeImg.onload = tryDraw;
 
-  this.addEventListener("keydown", function (evt) {
+  // Button handlers
+  startBtn.addEventListener("click", startGame);
+  restartBtn.addEventListener("click", restart);
+
+  // Input handlers
+  document.addEventListener("keydown", function (evt) {
     if (evt.code === "Space" || evt.code === "ArrowUp") {
-      birdY -= jumpVelocity; // Move bird up by 50 pixels
-      if (birdY < 0) {
-        birdY = 0; // Prevent bird from going above the board
+      if (gameState === RUNNING) {
+        velocity = jumpStrength;
       }
+    }
+    if (evt.code === "KeyR") {
+      if (gameState === GAME_OVER) {
+        restart();
+      }
+    }
+  });
+
+  // Click/tap handler for flapping
+  board.addEventListener("click", function () {
+    if (gameState === RUNNING) {
+      velocity = jumpStrength;
     }
   });
 
   update();
 };
 
+function startGame() {
+  gameState = RUNNING;
+  startBtn.disabled = true;
+  restartBtn.disabled = true;
+}
+
 function drawScene() {
   // Clear the board
   context.clearRect(0, 0, boardWidth, boardHeight);
 
-  // Draw the bird (centered vertically, near the left)
+  // Draw the bird
   drawBird();
 
-  // Draw pipe pair on the right side.
-  // Top pipe at y=0:
+  // Draw pipe pair on the right side
   context.drawImage(topPipeImg, pipeX, pipeY, pipeWidth, pipeHeight);
 
-  // Bottom pipe aligned to the bottom of the board.
-  // (No "gap" logic yet—just static placement.)
   const bottomPipeY = boardHeight - pipeHeight;
   context.drawImage(bottomPipeImg, pipeX, bottomPipeY, pipeWidth, pipeHeight);
+
+  // Draw game over text if applicable
+  if (gameState === GAME_OVER) {
+    context.fillStyle = "white";
+    context.font = "40px sans-serif";
+    context.textAlign = "center";
+    context.fillText("GAME OVER", boardWidth / 2, boardHeight / 2 - 20);
+    context.font = "20px sans-serif";
+    context.fillText(
+      "Press R or Click to Restart",
+      boardWidth / 2,
+      boardHeight / 2 + 20
+    );
+  }
 }
-// Function to draw the bird at its current position
+
 function drawBird() {
   context.drawImage(birdImg, birdX, birdY, birdWidth, birdHeight);
 }
 
-// Main game loop
 function update() {
-  // Clears the entire canvas
-  //context.clearRect(0, 0, board.width, board.height);
-  // Clear only the bird's previous area (small padding to avoid artifacts)
-  context.clearRect(birdX - 2, 0, birdWidth + 4, boardHeight);
-  // Updates the bird's position
-  birdY = birdY + gravity; // Gravity effect: bird falls down each frame
-  if (birdY + birdHeight > boardHeight) {
-    birdY = boardHeight - birdHeight; // Prevent bird from falling below the board
-    alert("Game Over!");
-    return; // Stop the game loop
+  if (gameState === START) {
+    drawScene();
+    requestAnimationFrame(update);
+    return;
   }
-  // Draws the bird at its new position
-  drawBird();
+
+  if (gameState === GAME_OVER) {
+    drawScene();
+    requestAnimationFrame(update);
+    return;
+  }
+
+  // Apply physics
+  velocity += gravity;
+  birdY += velocity;
+
+  // Clamp to canvas bounds
+  if (birdY < 0) {
+    birdY = 0;
+    velocity = 0;
+    endGame();
+  }
+
+  if (birdY + birdHeight > boardHeight) {
+    birdY = boardHeight - birdHeight;
+    velocity = 0;
+    endGame();
+  }
+
+  // Redraw the entire scene
+  drawScene();
+
   requestAnimationFrame(update);
+}
+
+function endGame() {
+  gameState = GAME_OVER;
+  restartBtn.disabled = false;
+}
+
+function restart() {
+  // Reset bird position and physics
+  birdY = (boardHeight - birdHeight) / 2;
+  velocity = 0;
+
+  // Reset game state
+  gameState = RUNNING;
+  restartBtn.disabled = true;
+
+  // Redraw
+  drawScene();
 }
