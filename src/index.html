@@ -14,15 +14,16 @@
       <div>
         <b>Difficulty</b>
       </div>
-      <button class="btn difficulty-btn selected-difficulty" onclick="setDifficulty(this, 'Easy')" id="difficulty-easy">Easy</button>
+      <button class="btn difficulty-btn selected-difficulty" onclick="setDifficulty(this, 'Easy')"
+        id="difficulty-easy">Easy</button>
       <button class="btn difficulty-btn" onclick="setDifficulty(this, 'Medium')">Medium</button>
       <button class="btn difficulty-btn" onclick="setDifficulty(this, 'Hard')">Hard</button>
     </div>
     <canvas width="360" height="640" class="game-canvas" id="board"></canvas>
 
     <div class="controls">
-      <button class="btn" id="startBtn">Start Game</button>
-      <button class="btn" id="restartBtn" disabled>Restart</button>
+      <button class="btn" id="startBtn" onclick="startGame()">Start Game</button>
+      <button class="btn" id="restartBtn" disabled onclick="restart()">Restart</button>
     </div>
   </div>
 </body>

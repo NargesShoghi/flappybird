@@ -47,40 +47,46 @@ let score = 0;
 let startBtn, restartBtn;
 let pipeInterval;
 
+// This function runs when the page loads
 window.onload = function () {
+  // Get the board element to set the width and height
   board = document.getElementById("board");
   board.height = boardHeight;
   board.width = boardWidth;
   context = board.getContext("2d");
 
-  // Get UI elements
+  // Get Start and Restart buttons
   startBtn = document.getElementById("startBtn");
   restartBtn = document.getElementById("restartBtn");
 
   // Load images
+  // Draw the Bird in the starting position when the page is loaded first time
   birdImg = new Image();
   birdImg.src = "./flappybird.png";
   birdImg.onload = function () {
     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
   };
 
+  // Create pipe images
   topPipeImg = new Image();
   topPipeImg.src = "./toppipe.png";
-
   bottomPipeImg = new Image();
   bottomPipeImg.src = "./bottompipe.png";
 
-  // Button handlers
-  startBtn.addEventListener("click", startGame);
-  restartBtn.addEventListener("click", restart);
-
-  // Input handlers
+  // Add the Input handlers for handling flapping and restarting
   document.addEventListener("keydown", function (e) {
+    // Handling flapping on Space or Up arrow key if the game is running
     if (e.code === "Space" || e.code === "ArrowUp") {
       if (gameState === RUNNING) {
         velocityY = reduceVelocityY;
       }
+
+      // Start the game if it's in START state
+      if (gameState === START) {
+        startGame();
+      }
     }
+    // Handling restart on R key if the game is over
     if (e.code === "KeyR") {
       if (gameState === GAME_OVER) {
         restart();
@@ -90,44 +96,68 @@ window.onload = function () {
 
   // Click/tap handler for flapping
   board.addEventListener("click", function () {
+    // Handling flapping on click/tap if the game is running
     if (gameState === RUNNING) {
       velocityY = reduceVelocityY;
     }
+    // Handling restart on click/tap if the game is over
     if (gameState === GAME_OVER) {
       restart();
     }
+
+    // Start the game if it's in START state
+    if (gameState === START) {
+      startGame();
+    }
   });
 
+  // Start the game loop
   requestAnimationFrame(update);
+
+  // Set default difficulty to Easy
   this.document.getElementById("difficulty-easy").click();
 };
 
 function startGame() {
+  // Change game state to RUNNING
   gameState = RUNNING;
+
+  // Disable Start and Restart buttons
   startBtn.disabled = true;
   restartBtn.disabled = true;
+
+  // Start placing pipes at intervals
   pipeInterval = setInterval(placePipes, pipeIntervalTime);
+
+  // Disable difficulty buttons as it's already started
   disableDifficultyButtons();
 }
 
 function update() {
   requestAnimationFrame(update);
 
+  // Clear the board
   context.clearRect(0, 0, board.width, board.height);
 
+  // Handle different game states
+
+  // START state
   if (gameState === START) {
     // Draw bird in starting position
     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
     return;
   }
 
+  // GAME OVER state
   if (gameState === GAME_OVER) {
     // Draw everything frozen
+
+    // Draw bird
     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
     // Draw pipes
     for (let i = 0; i < pipeArray.length; i++) {
-      let pipe = pipeArray[i];
+      const pipe = pipeArray[i];
       context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
     }
 
@@ -151,32 +181,41 @@ function update() {
   }
 
   // Game is running
+
   // Bird
+  // Apply gravity to bird
   velocityY += gravity;
   bird.y = Math.max(bird.y + velocityY, 0); // Apply gravity, limit to top of canvas
+
+  // Draw bird
   context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
+  // Check for collision with ground
   if (bird.y > board.height) {
     endGame();
   }
 
   // Pipes
+  // Move and draw pipes
   for (let i = 0; i < pipeArray.length; i++) {
-    let pipe = pipeArray[i];
+    const pipe = pipeArray[i];
+    // Move pipe to left
     pipe.x += velocityX;
     context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
 
+    // Check for score
     if (!pipe.passed && bird.x > pipe.x + pipe.width) {
       score += 0.5; // 0.5 because there are 2 pipes! so 0.5*2 = 1, 1 for each set of pipes
       pipe.passed = true;
     }
 
+    // Check for collision between bird and pipes
     if (detectCollision(bird, pipe)) {
       endGame();
     }
   }
 
-  // Clear pipes
+  // Clear pipes that are out of the board
   while (pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
     pipeArray.shift(); // Removes first element from the array
   }
@@ -188,12 +227,20 @@ function update() {
 }
 
 function endGame() {
+  // Set game state to GAME_OVER
   gameState = GAME_OVER;
+
+  // Enable Restart button
   restartBtn.disabled = false;
+
+  // Stop pipe generation
   clearInterval(pipeInterval);
+
+  // Enable difficulty buttons to allow changing difficulty before restarting
   enableDifficultyButtons();
 }
 
+// Restart the game
 function restart() {
   // Reset bird position and physics
   bird.y = birdY;
@@ -209,6 +256,8 @@ function restart() {
 
   // Restart pipe generation
   pipeInterval = setInterval(placePipes, pipeIntervalTime);
+
+  // Disable difficulty buttons as it's already started
   disableDifficultyButtons();
 }
 
@@ -244,6 +293,7 @@ function placePipes() {
   pipeArray.push(bottomPipe);
 }
 
+// AABB collision detection
 function detectCollision(a, b) {
   return (
     a.x < b.x + b.width && // a's top left corner doesn't reach b's top right corner
@@ -254,6 +304,7 @@ function detectCollision(a, b) {
 }
 
 function setDifficulty(btn, level) {
+  // Set game parameters based on selected difficulty
   switch (level.toLowerCase()) {
     case "easy":
       gravity = 0.2;
@@ -274,20 +325,23 @@ function setDifficulty(btn, level) {
       reduceVelocityY = -6;
       break;
   }
+
+  // Update selected button UI (highlight selected difficulty)
   document.querySelectorAll(".difficulty-btn").forEach((bt) => {
     bt.classList.remove("selected-difficulty");
   });
-
   btn.classList.add("selected-difficulty");
 }
 
 function disableDifficultyButtons() {
+  // Disable difficulty buttons
   document.querySelectorAll(".difficulty-btn").forEach((btn) => {
     btn.disabled = true;
   });
 }
 
 function enableDifficultyButtons() {
+  // Enable difficulty buttons
   document.querySelectorAll(".difficulty-btn").forEach((btn) => {
     btn.disabled = false;
   });
