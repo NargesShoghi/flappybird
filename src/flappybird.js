@@ -5,22 +5,33 @@ let boardHeight = 640;
 let context;
 
 // --- Bird ---
-let birdWidth = 34; // width/height ratio = 17/12 if you want to preserve proportions
+let birdWidth = 34;
 let birdHeight = 24;
 let birdX = boardWidth / 8;
-let birdY = (boardHeight - birdHeight) / 2; // centered vertically
+let birdY = boardHeight / 2;
 let birdImg;
 
-// --- Physics ---
-let velocity = 0;
-let gravity = 0.5;
-let jumpStrength = -8;
+let bird = {
+  x: birdX,
+  y: birdY,
+  width: birdWidth,
+  height: birdHeight,
+};
 
-// --- Pipes (static for now) ---
-let pipeWidth = 64; // width/height ratio = 1/8 for the given sprites
-let pipeHeight = 250;
-let pipeX = boardWidth - pipeWidth; // 296, so pipes are visible
-let pipeY = 0; // top pipe at the top
+// --- Physics ---
+let velocityY = 0;
+let velocityX = -1;
+let gravity = 0.2;
+let reduceVelocityY = -4;
+let pipeIntervalTime = 2000;
+let pipeGaps = 4;
+
+// --- Pipes ---
+let pipeArray = [];
+let pipeWidth = 64;
+let pipeHeight = 512;
+let pipeX = boardWidth;
+let pipeY = 0;
 
 let topPipeImg;
 let bottomPipeImg;
@@ -30,15 +41,16 @@ const START = "START";
 const RUNNING = "RUNNING";
 const GAME_OVER = "GAME_OVER";
 let gameState = START;
+let score = 0;
 
 // --- UI Elements ---
 let startBtn, restartBtn;
+let pipeInterval;
 
 window.onload = function () {
-  // Setup canvas
   board = document.getElementById("board");
-  board.width = boardWidth;
   board.height = boardHeight;
+  board.width = boardWidth;
   context = board.getContext("2d");
 
   // Get UI elements
@@ -48,6 +60,9 @@ window.onload = function () {
   // Load images
   birdImg = new Image();
   birdImg.src = "./flappybird.png";
+  birdImg.onload = function () {
+    context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+  };
 
   topPipeImg = new Image();
   topPipeImg.src = "./toppipe.png";
@@ -55,34 +70,18 @@ window.onload = function () {
   bottomPipeImg = new Image();
   bottomPipeImg.src = "./bottompipe.png";
 
-  // Only draw once everything needed is ready
-  // This ensures sprites appear even on a cold load.
-  let assetsLoaded = 0;
-  const totalAssets = 3;
-
-  const tryDraw = () => {
-    assetsLoaded++;
-    if (assetsLoaded === totalAssets) {
-      drawScene();
-    }
-  };
-
-  birdImg.onload = tryDraw;
-  topPipeImg.onload = tryDraw;
-  bottomPipeImg.onload = tryDraw;
-
   // Button handlers
   startBtn.addEventListener("click", startGame);
   restartBtn.addEventListener("click", restart);
 
   // Input handlers
-  document.addEventListener("keydown", function (evt) {
-    if (evt.code === "Space" || evt.code === "ArrowUp") {
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" || e.code === "ArrowUp") {
       if (gameState === RUNNING) {
-        velocity = jumpStrength;
+        velocityY = reduceVelocityY;
       }
     }
-    if (evt.code === "KeyR") {
+    if (e.code === "KeyR") {
       if (gameState === GAME_OVER) {
         restart();
       }
@@ -92,101 +91,204 @@ window.onload = function () {
   // Click/tap handler for flapping
   board.addEventListener("click", function () {
     if (gameState === RUNNING) {
-      velocity = jumpStrength;
+      velocityY = reduceVelocityY;
+    }
+    if (gameState === GAME_OVER) {
+      restart();
     }
   });
 
-  update();
+  requestAnimationFrame(update);
+  this.document.getElementById("difficulty-easy").click();
 };
 
 function startGame() {
   gameState = RUNNING;
   startBtn.disabled = true;
   restartBtn.disabled = true;
+  pipeInterval = setInterval(placePipes, pipeIntervalTime);
+  disableDifficultyButtons();
 }
 
-function drawScene() {
-  // Clear the board
-  context.clearRect(0, 0, boardWidth, boardHeight);
+function update() {
+  requestAnimationFrame(update);
 
-  // Draw the bird
-  drawBird();
+  context.clearRect(0, 0, board.width, board.height);
 
-  // Draw pipe pair on the right side
-  context.drawImage(topPipeImg, pipeX, pipeY, pipeWidth, pipeHeight);
+  if (gameState === START) {
+    // Draw bird in starting position
+    context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+    return;
+  }
 
-  const bottomPipeY = boardHeight - pipeHeight;
-  context.drawImage(bottomPipeImg, pipeX, bottomPipeY, pipeWidth, pipeHeight);
-
-  // Draw game over text if applicable
   if (gameState === GAME_OVER) {
+    // Draw everything frozen
+    context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+
+    // Draw pipes
+    for (let i = 0; i < pipeArray.length; i++) {
+      let pipe = pipeArray[i];
+      context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+    }
+
+    // Score
     context.fillStyle = "white";
+    context.font = "30px sans-serif";
+    context.fillText(score, 5, 45);
+
+    // Game over text
     context.font = "40px sans-serif";
     context.textAlign = "center";
     context.fillText("GAME OVER", boardWidth / 2, boardHeight / 2 - 20);
     context.font = "20px sans-serif";
     context.fillText(
-      "Press R or Click to Restart",
+      "Press R to Restart",
       boardWidth / 2,
       boardHeight / 2 + 20
     );
-  }
-}
-
-function drawBird() {
-  context.drawImage(birdImg, birdX, birdY, birdWidth, birdHeight);
-}
-
-function update() {
-  if (gameState === START) {
-    drawScene();
-    requestAnimationFrame(update);
+    context.textAlign = "left";
     return;
   }
 
-  if (gameState === GAME_OVER) {
-    drawScene();
-    requestAnimationFrame(update);
-    return;
-  }
+  // Game is running
+  // Bird
+  velocityY += gravity;
+  bird.y = Math.max(bird.y + velocityY, 0); // Apply gravity, limit to top of canvas
+  context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
-  // Apply physics
-  velocity += gravity;
-  birdY += velocity;
-
-  // Clamp to canvas bounds
-  if (birdY < 0) {
-    birdY = 0;
-    velocity = 0;
+  if (bird.y > board.height) {
     endGame();
   }
 
-  if (birdY + birdHeight > boardHeight) {
-    birdY = boardHeight - birdHeight;
-    velocity = 0;
-    endGame();
+  // Pipes
+  for (let i = 0; i < pipeArray.length; i++) {
+    let pipe = pipeArray[i];
+    pipe.x += velocityX;
+    context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+
+    if (!pipe.passed && bird.x > pipe.x + pipe.width) {
+      score += 0.5; // 0.5 because there are 2 pipes! so 0.5*2 = 1, 1 for each set of pipes
+      pipe.passed = true;
+    }
+
+    if (detectCollision(bird, pipe)) {
+      endGame();
+    }
   }
 
-  // Redraw the entire scene
-  drawScene();
+  // Clear pipes
+  while (pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
+    pipeArray.shift(); // Removes first element from the array
+  }
 
-  requestAnimationFrame(update);
+  // Score
+  context.fillStyle = "white";
+  context.font = "30px sans-serif";
+  context.fillText(score, 5, 45);
 }
 
 function endGame() {
   gameState = GAME_OVER;
   restartBtn.disabled = false;
+  clearInterval(pipeInterval);
+  enableDifficultyButtons();
 }
 
 function restart() {
   // Reset bird position and physics
-  birdY = (boardHeight - birdHeight) / 2;
-  velocity = 0;
+  bird.y = birdY;
+  velocityY = 0;
+
+  // Reset pipes and score
+  pipeArray = [];
+  score = 0;
 
   // Reset game state
   gameState = RUNNING;
   restartBtn.disabled = true;
 
-  // Redraw
-  drawScene();
+  // Restart pipe generation
+  pipeInterval = setInterval(placePipes, pipeIntervalTime);
+  disableDifficultyButtons();
+}
+
+function placePipes() {
+  if (gameState !== RUNNING) {
+    return;
+  }
+
+  // (0-1) * pipeHeight/2.
+  // 0 -> -128 (pipeHeight/4)
+  // 1 -> -128 - 256 (pipeHeight/4 - pipeHeight/2) = -3/4 pipeHeight
+  let randomPipeY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
+  let openingSpace = board.height / pipeGaps; // Space between top and bottom pipes
+
+  let topPipe = {
+    img: topPipeImg,
+    x: pipeX,
+    y: randomPipeY,
+    width: pipeWidth,
+    height: pipeHeight,
+    passed: false,
+  };
+  pipeArray.push(topPipe);
+
+  let bottomPipe = {
+    img: bottomPipeImg,
+    x: pipeX,
+    y: randomPipeY + pipeHeight + openingSpace,
+    width: pipeWidth,
+    height: pipeHeight,
+    passed: false,
+  };
+  pipeArray.push(bottomPipe);
+}
+
+function detectCollision(a, b) {
+  return (
+    a.x < b.x + b.width && // a's top left corner doesn't reach b's top right corner
+    a.x + a.width > b.x && // a's top right corner passes b's top left corner
+    a.y < b.y + b.height && // a's top left corner doesn't reach b's bottom left corner
+    a.y + a.height > b.y
+  ); // a's bottom left corner passes b's top left corner
+}
+
+function setDifficulty(btn, level) {
+  switch (level.toLowerCase()) {
+    case "easy":
+      gravity = 0.2;
+      pipeIntervalTime = 5000;
+      pipeGaps = 4;
+      reduceVelocityY = -4;
+      break;
+    case "medium":
+      gravity = 0.4;
+      pipeIntervalTime = 4000;
+      pipeGaps = 5;
+      reduceVelocityY = -5;
+      break;
+    case "hard":
+      gravity = 0.6;
+      pipeIntervalTime = 3200;
+      pipeGaps = 6;
+      reduceVelocityY = -6;
+      break;
+  }
+  document.querySelectorAll(".difficulty-btn").forEach((bt) => {
+    bt.classList.remove("selected-difficulty");
+  });
+
+  btn.classList.add("selected-difficulty");
+}
+
+function disableDifficultyButtons() {
+  document.querySelectorAll(".difficulty-btn").forEach((btn) => {
+    btn.disabled = true;
+  });
+}
+
+function enableDifficultyButtons() {
+  document.querySelectorAll(".difficulty-btn").forEach((btn) => {
+    btn.disabled = false;
+  });
 }

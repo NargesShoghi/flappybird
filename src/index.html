@@ -1,19 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flappy Bird Clone</title>
-    <link rel="stylesheet" href="flappybird.css">
-    <script src="flappybird.js" defer></script>
-  <body>
-    <div class="game-container">
-      <canvas width="360" height="640" class="game-canvas" id="board"></canvas>
-      
-      <div class="controls">
-        <button class="btn" id="startBtn">Start Game</button>
-        <button class="btn" id="restartBtn" disabled>Restart</button>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Bird Clone</title>
+  <link rel="stylesheet" href="flappybird.css">
+  <script src="flappybird.js" defer></script>
+
+<body>
+  <div class="game-container">
+    <div class="controls">
+      <div>
+        <b>Difficulty</b>
       </div>
+      <button class="btn difficulty-btn selected-difficulty" onclick="setDifficulty(this, 'Easy')" id="difficulty-easy">Easy</button>
+      <button class="btn difficulty-btn" onclick="setDifficulty(this, 'Medium')">Medium</button>
+      <button class="btn difficulty-btn" onclick="setDifficulty(this, 'Hard')">Hard</button>
     </div>
-  </body>
+    <canvas width="360" height="640" class="game-canvas" id="board"></canvas>
+
+    <div class="controls">
+      <button class="btn" id="startBtn">Start Game</button>
+      <button class="btn" id="restartBtn" disabled>Restart</button>
+    </div>
+  </div>
+</body>
+
 </html>

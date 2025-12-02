@@ -44,3 +44,19 @@ body {
   background: #ccc;
   cursor: not-allowed;
 }
+
+.difficulty-btn {
+  background: #71c5cf;
+}
+
+.difficulty-btn:hover {
+  background: #00d4ee;
+}
+
+.selected-difficulty {
+  background: #d2a650;
+}
+
+.selected-difficulty:hover {
+  background: #e1d694;
+}
